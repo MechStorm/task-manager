@@ -1,0 +1,12 @@
+databaseChangeLog:
+  - changeSet:
+      id: 003-add-tasks-user-fk
+      author: ivan
+      changes:
+        - addForeignKeyConstraint:
+            baseTableName: tasks
+            baseColumnNames: user_id
+            constraintName: fk_tasks_user
+            referencedTableName: users
+            referencedColumnNames: id
+            onDelete: SET NULL
