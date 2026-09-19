@@ -1,0 +1,23 @@
+databaseChangeLog:
+  - changeSet:
+      id: 005-add-version-column
+      author: ivan
+      changes:
+        - addColumn:
+            tableName: users
+            columns:
+              - column:
+                  name: version
+                  type: BIGINT
+                  defaultValueNumeric: 0
+                  constraints:
+                    nullable: false
+        - addColumn:
+            tableName: tasks
+            columns:
+              - column:
+                  name: version
+                  type: BIGINT
+                  defaultValueNumeric: 0
+                  constraints:
+                    nullable: false

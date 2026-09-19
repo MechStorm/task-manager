@@ -1,17 +1,22 @@
 package com.javarush.fedorov.taskmanager.service;
 
 import com.javarush.fedorov.taskmanager.dto.CreateUserRequestDto;
+import com.javarush.fedorov.taskmanager.dto.RegisterRequestDto;
 import com.javarush.fedorov.taskmanager.dto.UpdateUserRequestDto;
 import com.javarush.fedorov.taskmanager.dto.UserResponseDto;
 import com.javarush.fedorov.taskmanager.exception.EmailAlreadyInUseException;
 import com.javarush.fedorov.taskmanager.exception.ResourceNotFoundException;
+import com.javarush.fedorov.taskmanager.model.entity.Role;
 import com.javarush.fedorov.taskmanager.model.entity.Task;
 import com.javarush.fedorov.taskmanager.model.entity.User;
 import com.javarush.fedorov.taskmanager.model.repository.TaskRepository;
 import com.javarush.fedorov.taskmanager.model.repository.UserRepository;
 import com.javarush.fedorov.taskmanager.model.status.TaskStatus;
+import com.javarush.fedorov.taskmanager.security.CurrentUser;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -29,6 +34,25 @@ public class UserService {
     private final PasswordEncoder passwordEncoder;
 
     @Transactional
+    public UserResponseDto register(RegisterRequestDto requestDto) {
+        if(userRepository.findByEmail(requestDto.getEmail()).isPresent()) {
+            throw new EmailAlreadyInUseException("Email already in use");
+        }
+
+        User user = new User();
+        user.setName(requestDto.getName());
+        user.setEmail(requestDto.getEmail());
+        user.setPassword(passwordEncoder.encode(requestDto.getPassword()));
+        user.setRole(Role.USER);
+
+        User savedUser = userRepository.saveAndFlush(user);
+        log.info("User {} registered with role {}", savedUser.getId(), savedUser.getRole());
+
+        return UserResponseDto.from(savedUser);
+    }
+
+    @PreAuthorize("hasRole('ADMIN')")
+    @Transactional
     public UserResponseDto createUser(CreateUserRequestDto requestDto) {
         if (userRepository.findByEmail(requestDto.getEmail()).isPresent()) {
             throw new EmailAlreadyInUseException("Email already in use");
@@ -38,15 +62,21 @@ public class UserService {
         user.setName(requestDto.getName());
         user.setEmail(requestDto.getEmail());
         user.setPassword(passwordEncoder.encode(requestDto.getPassword()));
+        user.setRole(requestDto.getRole() != null ? requestDto.getRole() : Role.USER);
 
-        User savedUser = userRepository.save(user);
+        User savedUser = userRepository.saveAndFlush(user);
         log.info("User created: {}", savedUser);
 
         return UserResponseDto.from(savedUser);
     }
 
     @Transactional
-    public UserResponseDto updateUser(UUID userId, UpdateUserRequestDto requestDto) {
+    public UserResponseDto updateUser(UUID userId, UpdateUserRequestDto requestDto, CurrentUser currentUser) {
+
+        if(!currentUser.isAdmin() && !currentUser.id().equals(userId)) {
+            throw new AccessDeniedException("You can only update your own profile");
+        }
+
         User user = findUserEntity(userId);
 
         if (requestDto.getName() != null && !requestDto.getName().isEmpty()) {
@@ -58,12 +88,13 @@ public class UserService {
             user.setPassword(passwordEncoder.encode(requestDto.getPassword()));
         }
 
-        User savedUser = userRepository.save(user);
+        User savedUser = userRepository.saveAndFlush(user);
         log.info("User updated: {}", savedUser);
 
         return UserResponseDto.from(savedUser);
     }
 
+    @PreAuthorize("hasRole('ADMIN')")
     @Transactional
     public void deleteUser(UUID id) {
         log.info("Deleting user with id {}", id);

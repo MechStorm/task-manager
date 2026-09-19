@@ -1,9 +1,6 @@
 package com.javarush.fedorov.taskmanager.model.entity;
 
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.OneToMany;
-import jakarta.persistence.Table;
+import jakarta.persistence.*;
 import lombok.*;
 
 import java.util.ArrayList;
@@ -26,6 +23,11 @@ public class User extends BaseEntity {
 
     @Column(name = "password",  nullable = false)
     private String password;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "role", nullable = false, length = 20)
+    @Builder.Default
+    private Role role = Role.USER;
 
     @Builder.Default
     @OneToMany(mappedBy = "owner")

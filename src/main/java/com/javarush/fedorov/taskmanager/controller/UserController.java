@@ -3,11 +3,12 @@ package com.javarush.fedorov.taskmanager.controller;
 import com.javarush.fedorov.taskmanager.dto.CreateUserRequestDto;
 import com.javarush.fedorov.taskmanager.dto.UpdateUserRequestDto;
 import com.javarush.fedorov.taskmanager.dto.UserResponseDto;
+import com.javarush.fedorov.taskmanager.model.entity.UserSecureWrapper;
 import com.javarush.fedorov.taskmanager.service.UserService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
@@ -18,7 +19,6 @@ import java.util.UUID;
 @Validated
 @RestController
 @RequestMapping("/api/users")
-@Slf4j
 @RequiredArgsConstructor
 public class UserController {
 
@@ -42,8 +42,12 @@ public class UserController {
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<UserResponseDto> updateUser(@PathVariable UUID id, @Valid @RequestBody UpdateUserRequestDto user) {
-        UserResponseDto responseDto = userService.updateUser(id, user);
+    public ResponseEntity<UserResponseDto> updateUser(
+            @PathVariable UUID id,
+            @Valid @RequestBody UpdateUserRequestDto user,
+            @AuthenticationPrincipal UserSecureWrapper userSecureWrapper
+    ) {
+        UserResponseDto responseDto = userService.updateUser(id, user, userSecureWrapper.toCurrentUser());
         return ResponseEntity.ok(responseDto);
     }
 

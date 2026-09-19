@@ -3,11 +3,12 @@ package com.javarush.fedorov.taskmanager.controller;
 import com.javarush.fedorov.taskmanager.dto.CreateTaskRequestDto;
 import com.javarush.fedorov.taskmanager.dto.TaskResponseDto;
 import com.javarush.fedorov.taskmanager.dto.UpdateTaskRequestDto;
+import com.javarush.fedorov.taskmanager.model.entity.UserSecureWrapper;
 import com.javarush.fedorov.taskmanager.service.TaskService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
@@ -18,7 +19,6 @@ import java.util.UUID;
 @Validated
 @RestController
 @RequestMapping("/api/tasks")
-@Slf4j
 @RequiredArgsConstructor
 public class TaskController {
 
@@ -35,15 +35,31 @@ public class TaskController {
     }
 
     @PostMapping
-    public ResponseEntity<TaskResponseDto> createTask(@Valid @RequestBody CreateTaskRequestDto requestDto) {
-        TaskResponseDto responseDto = taskService.createTask(requestDto);
+    public ResponseEntity<TaskResponseDto> createTask(
+            @Valid @RequestBody CreateTaskRequestDto requestDto,
+            @AuthenticationPrincipal UserSecureWrapper userSecureWrapper
+    ) {
+        TaskResponseDto responseDto = taskService.createTask(requestDto, userSecureWrapper.toCurrentUser());
         URI location = URI.create("/api/tasks/" + responseDto.getId());
         return ResponseEntity.created(location).body(responseDto);
     }
 
+    @PostMapping("/{id}/release")
+    public ResponseEntity<TaskResponseDto> releaseTask(
+            @PathVariable UUID id,
+            @AuthenticationPrincipal UserSecureWrapper userSecureWrapper
+    ) {
+        TaskResponseDto responseDto = taskService.releaseTask(id, userSecureWrapper.toCurrentUser());
+        return ResponseEntity.ok(responseDto);
+    }
+
     @PutMapping("/{id}")
-    public ResponseEntity<TaskResponseDto> updateTask(@PathVariable UUID id, @Valid @RequestBody UpdateTaskRequestDto requestDto) {
-        TaskResponseDto responseDto = taskService.updateTask(id, requestDto);
+    public ResponseEntity<TaskResponseDto> updateTask(
+            @PathVariable UUID id,
+            @Valid @RequestBody UpdateTaskRequestDto requestDto,
+            @AuthenticationPrincipal UserSecureWrapper userSecureWrapper
+    ) {
+        TaskResponseDto responseDto = taskService.updateTask(id, requestDto, userSecureWrapper.toCurrentUser());
         return ResponseEntity.ok(responseDto);
     }
 

@@ -1,6 +1,5 @@
 package com.javarush.fedorov.taskmanager.dto;
 
-import com.javarush.fedorov.taskmanager.model.entity.Role;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
@@ -9,7 +8,7 @@ import lombok.Setter;
 
 @Getter
 @Setter
-public class CreateUserRequestDto {
+public class RegisterRequestDto {
 
     @NotBlank(message = "Name mustn't be blank")
     @Size(max = 255, message = "Name mustn't exceed 255 characters")
@@ -23,6 +22,4 @@ public class CreateUserRequestDto {
     @NotBlank(message = "Password mustn't be blank")
     @Size(min = 8, max = 16, message = "Password must be between 8 and 16 characters")
     private String password;
-
-    private Role role;
 }
