@@ -116,6 +116,10 @@ public class TaskService {
 
         TaskValidationUtil.assertCanEditContent(task, currentUser);
 
+        if(task.getOwner() == null) {
+            throw new IllegalArgumentException("Task has no owner and is already in the pool");
+        }
+
         if(task.getStatus() == TaskStatus.DONE) {
             throw new IllegalArgumentException("Completed task can't be released back to the pool");
         }

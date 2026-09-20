@@ -1,0 +1,13 @@
+spring:
+  jpa:
+    properties:
+      hibernate:
+        format_sql: false
+logging:
+  level:
+    root: WARN
+    com.javarush.fedorov.taskmanager: INFO
+    org.hibernate.SQL: WARN
+    liquibase: WARN
+    org.testcontainers: WARN
+    com.github.dockerjava: WARN
