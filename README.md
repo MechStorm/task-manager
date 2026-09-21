@@ -112,10 +112,8 @@ Body validation errors additionally carry a per-field `errors` map:
 ### 1. Start the database
 
 ```bash
-docker compose up -d
+docker compose up -d postgres
 ```
-
-Starts Postgres 16 in the `todo_list_app_db` container, database `todo_list_db` (user/password: `postgres`/`postgres`), with port `5432` published to the host.
 
 ### 2. Run the application
 
@@ -161,6 +159,33 @@ The token survives page reloads until it expires.
 | `/actuator/info` | no authentication |
 | `/actuator/prometheus` | no authentication, `text/plain` |
 | all other `/actuator/**` | `ADMIN` only (and not exposed — they answer `404`) |
+
+### Prometheus and Grafana
+
+```bash
+docker compose up -d
+```
+
+Brings up the whole stack: Postgres, the application built from the `Dockerfile`, Prometheus and Grafana.
+
+| Service | URL | Notes |
+|---|---|---|
+| Prometheus | `http://localhost:9090` | Scrapes `/actuator/prometheus` every 15 s (`monitoring/prometheus/prometheus.yml`) |
+| Grafana | `http://localhost:3000` | Login `admin`/`admin`, overridden with `GRAFANA_USER`/`GRAFANA_PASSWORD` |
+
+Grafana is provisioned from `monitoring/grafana/`: the Prometheus datasource is added automatically, and the **Task Manager** dashboard shows up in the folder of the same name. It covers HTTP traffic (request rate, share of 5xx, p50/p95/p99 latency, per-endpoint breakdown), task and login activity, the JVM (heap, CPU, GC, threads, warn/error log events) and the HikariCP connection pool.
+
+Besides the standard Spring Boot metrics, the application publishes its own:
+
+| Metric | Tags | Incremented when |
+|---|---|---|
+| `tasks_creations_total` | — | A task is created |
+| `tasks_released_total` | — | A task is released back to the pool |
+| `tasks_deleted_total` | — | A task is deleted |
+| `tasks_status_transitions_total` | `prev_status`, `new_status` | A task changes status, release included |
+| `auth_login_total` | `result` (`success` / `failure`) | A login attempt on `/api/auth/login` |
+
+Every metric carries the `application="task-manager-app"` tag.
 
 ### Tests
 

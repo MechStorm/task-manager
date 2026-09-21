@@ -4,6 +4,7 @@ import com.javarush.fedorov.taskmanager.dto.CreateTaskRequestDto;
 import com.javarush.fedorov.taskmanager.dto.TaskResponseDto;
 import com.javarush.fedorov.taskmanager.dto.UpdateTaskRequestDto;
 import com.javarush.fedorov.taskmanager.exception.ResourceNotFoundException;
+import com.javarush.fedorov.taskmanager.metrics.TaskMetrics;
 import com.javarush.fedorov.taskmanager.model.entity.Task;
 import com.javarush.fedorov.taskmanager.model.entity.User;
 import com.javarush.fedorov.taskmanager.model.repository.TaskRepository;
@@ -27,6 +28,7 @@ import java.util.UUID;
 public class TaskService {
     private final TaskRepository taskRepository;
     private final UserRepository userRepository;
+    private final TaskMetrics metrics;
 
     @Transactional
     public TaskResponseDto createTask(CreateTaskRequestDto requestDto, CurrentUser currentUser) {
@@ -43,6 +45,7 @@ public class TaskService {
         task.setStatus(TaskStatus.TO_DO);
 
         Task savedTask = taskRepository.saveAndFlush(task);
+        metrics.taskCreated();
         log.info("Created task {} with status {}", savedTask.getId(), savedTask.getStatus());
 
         return TaskResponseDto.from(savedTask);
@@ -51,6 +54,7 @@ public class TaskService {
     @Transactional
     public TaskResponseDto updateTask(UUID taskId, UpdateTaskRequestDto requestDto, CurrentUser currentUser) {
         Task task = findTaskEntityById(taskId);
+        TaskStatus previousStatus = task.getStatus();
 
         TaskValidationUtil.assertCanModify(task, currentUser);
         TaskValidationUtil.assertCanAssignTo(requestDto.getUserId(), currentUser);
@@ -79,12 +83,15 @@ public class TaskService {
 
         if (requestDto.getStatus() != null) {
             TaskValidationUtil.validateStatusTransition(task, requestDto.getStatus());
-            TaskStatus previousStatus = task.getStatus();
             task.setStatus(requestDto.getStatus());
             log.info("Task {} reassigned from status {} to status {}", taskId, previousStatus, requestDto.getStatus());
         }
 
         Task savedTask = taskRepository.saveAndFlush(task);
+        if (previousStatus != savedTask.getStatus()) {
+            metrics.statusChanged(previousStatus, savedTask.getStatus());
+        }
+
         log.info("Updated task {} with status {}", taskId, savedTask.getStatus());
         return TaskResponseDto.from(savedTask);
     }
@@ -96,6 +103,7 @@ public class TaskService {
 
         log.info("Deleted task {} with status {}", taskId, task.getStatus());
         taskRepository.delete(task);
+        metrics.taskDeleted();
     }
 
     @Transactional(readOnly = true)
@@ -113,22 +121,29 @@ public class TaskService {
     @Transactional
     public TaskResponseDto releaseTask(UUID taskId, CurrentUser currentUser) {
         Task task = findTaskEntityById(taskId);
+        TaskStatus previousStatus = task.getStatus();
 
         TaskValidationUtil.assertCanEditContent(task, currentUser);
 
-        if(task.getOwner() == null) {
+        if (task.getOwner() == null) {
             throw new IllegalArgumentException("Task has no owner and is already in the pool");
         }
 
-        if(task.getStatus() == TaskStatus.DONE) {
+        if (task.getStatus() == TaskStatus.DONE) {
             throw new IllegalArgumentException("Completed task can't be released back to the pool");
         }
 
         UUID previousOwnerId = task.getOwner().getId();
+
         task.setOwner(null);
         task.setStatus(TaskStatus.TO_DO);
 
         Task savedTask = taskRepository.saveAndFlush(task);
+        metrics.taskReleased();
+        if (previousStatus != savedTask.getStatus()) {
+            metrics.statusChanged(previousStatus, savedTask.getStatus());
+        }
+
         log.info("Released task {} by user {} back to the pull", taskId, previousOwnerId);
 
         return TaskResponseDto.from(savedTask);
