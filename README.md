@@ -14,7 +14,7 @@ Base URL: `http://localhost:8080`. Bodies are JSON. Every `PUT` is partial: a fi
 
 ### Authentication
 
-Only `/api/auth/**` plus `/actuator/health`, `/actuator/info` and `/actuator/prometheus` are public. Everything else requires a header:
+Only `/api/auth/**`, the API docs (`/swagger-ui/**`, `/v3/api-docs/**`) plus `/actuator/health`, `/actuator/info` and `/actuator/prometheus` are public. Everything else requires a header:
 
 ```
 Authorization: Bearer <token>
@@ -125,6 +125,17 @@ mvn spring-boot:run
 
 On startup Liquibase applies every migration from `src/main/resources/db/changelog/` — there is no need to create tables by hand. The application comes up on `http://localhost:8080`.
 
+### 3. Explore the API in Swagger UI
+
+Open `http://localhost:8080/swagger-ui.html`; the raw OpenAPI spec is at `/v3/api-docs`. Both are public.
+
+To call protected endpoints:
+
+1. Run `POST /api/auth/register`, then `POST /api/auth/login` — their example bodies match, so both work as is. For admin-only endpoints log in as the administrator instead.
+2. Copy `token` from the response, press **Authorize** and paste it **without** the `Bearer` prefix.
+
+The token survives page reloads until it expires.
+
 ### Environment variables (optional)
 
 | Variable | Default | Purpose |
@@ -138,6 +149,7 @@ On startup Liquibase applies every migration from `src/main/resources/db/changel
 | `JWT_ACCESS_TOKEN_MINUTES` | `30` | Token lifetime |
 | `ADMIN_EMAIL` | `admin@example.com` | Email of the administrator created on startup |
 | `ADMIN_PASSWORD` | `adminqwerty` | Password of that administrator |
+| `SWAGGER_ENABLED` | `true` | Serve Swagger UI and `/v3/api-docs` |
 
 `JWT_SECRET` and `ADMIN_PASSWORD` must be overridden anywhere outside local development: the defaults sit in plain text in `application.yaml`.
 

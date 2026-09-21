@@ -259,4 +259,43 @@ class SecurityIntegrationTest extends IntegrationTestBase {
                     .expectStatus().isNotFound();
         }
     }
+
+    @Nested
+    @DisplayName("API documentation")
+    class ApiDocumentation {
+
+        @Test
+        @DisplayName("the OpenAPI spec and the Swagger UI config are served without authentication")
+        void openApiSpecIsPublic() {
+            client.get()
+                    .uri("/v3/api-docs")
+                    .exchange()
+                    .expectStatus().isOk()
+                    .expectBody()
+                    .jsonPath("$.paths['/api/tasks']").exists();
+
+            client.get()
+                    .uri("/v3/api-docs/swagger-config")
+                    .exchange()
+                    .expectStatus().isOk()
+                    .expectBody()
+                    .jsonPath("$.url").isEqualTo("/v3/api-docs");
+        }
+
+        @Test
+        @DisplayName("the Swagger UI page is served without authentication")
+        void swaggerUiIsPublic() {
+            client.get()
+                    .uri("/swagger-ui/index.html")
+                    .exchange()
+                    .expectStatus().isOk();
+
+            client.get()
+                    .uri("/swagger-ui.html")
+                    .exchange()
+                    .expectStatus().is3xxRedirection()
+                    .expectHeader().value(HttpHeaders.LOCATION,
+                            location -> assertThat(location).endsWith("/swagger-ui/index.html"));
+        }
+    }
 }
